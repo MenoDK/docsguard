@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "docsguard"
+version = "0.1.0"
+description = "Executable guards for project-oriented documentation and Claude Code workflows: docs map, ADRs, handoff, instruction budget, destructive-command and scope hooks."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+# Standard library only, on purpose: a guard that needs an install step to run is a guard people skip.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "ruff>=0.6", "mypy>=1.11"]
+
+[project.scripts]
+docsguard = "docsguard.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+docsguard = ["template/**/*", "template/**/.*", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["src", "tests", "scripts"]
+extend-exclude = ["build", "dist", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "C4", "SIM", "RUF"]
+ignore = ["S101", "S603", "S607"]  # asserts in tests; git is invoked with fixed argv, never a shell
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106", "S108"]
+"scripts/*" = ["S"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src", "tests", "scripts"]

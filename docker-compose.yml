@@ -1,0 +1,20 @@
+# Run the guards against any repository without installing anything:
+#   TARGET=/path/to/repo docker compose run --rm check
+#   TARGET=/path/to/repo docker compose run --rm budget
+# The target is mounted read-only: the guards never write to what they inspect.
+services:
+  check:
+    build: .
+    image: docsguard:local
+    command: ["check", "--root", "/workspace"]
+    volumes:
+      - ${TARGET:-.}:/workspace:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    network_mode: none
+    tmpfs: [/tmp]
+
+  budget:
+    extends: check
+    command: ["budget", "--root", "/workspace"]
