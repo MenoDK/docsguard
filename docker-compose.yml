@@ -2,9 +2,14 @@
 #   TARGET=/path/to/repo docker compose run --rm check
 #   TARGET=/path/to/repo docker compose run --rm budget
 # The target is mounted read-only: the guards never write to what they inspect.
+#
+# Look at the whole thing in a browser (http://localhost:8200, published on the loopback only):
+#   docker compose up --build --wait -d playground
 services:
   check:
-    build: .
+    build:
+      context: .
+      target: runtime
     image: docsguard:local
     command: ["check", "--root", "/workspace"]
     volumes:
@@ -18,3 +23,39 @@ services:
   budget:
     extends: check
     command: ["budget", "--root", "/workspace"]
+
+  # The lab: the site and a small server that runs the real guards on a sample project in a temporary folder. It has no login,
+  # so it is published on the loopback only, answers to no other Host name, and refuses to start with the lab on when
+  # DG_ENV is production.
+  playground:
+    build:
+      context: .
+      target: playground
+    image: docsguard-playground:local
+    init: true
+    ports:
+      - "127.0.0.1:${DG_PORT:-8200}:8200"
+    environment:
+      DG_LAB: "1"
+      DG_ENV: development
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: [/tmp]
+
+  # Browser tests (Playwright + axe). They share the network of the lab, so it is plain localhost:8200 (a secure origin)
+  # without any browser flag.
+  e2e:
+    profiles: [e2e]
+    image: mcr.microsoft.com/playwright:v1.49.1-jammy
+    network_mode: "service:playground"
+    working_dir: /work/e2e
+    volumes:
+      - ./e2e:/work/e2e
+      - ./docs/img:/work/docs/img
+    environment:
+      E2E_BASE_URL: http://localhost:8200
+      CI: "1"
+    depends_on:
+      playground: { condition: service_healthy }
+    command: ["bash", "-lc", "npm ci --no-audit --no-fund && npx tsc --noEmit && npx playwright test"]

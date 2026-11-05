@@ -15,7 +15,8 @@ PreToolUse hooks (destructive git, protected paths). Python 3.11+, standard libr
 - `src/docsguard/rules/`: one module per family of guards; each returns a `RuleResult` (what it examined, what it found).
 - `src/docsguard/hooks/`: `shell.py` (command analyser), `git_guard.py`, `scope_guard.py`, `protocol.py` (wire format).
 - `src/docsguard/template/`: what `docsguard init` installs. `dot-claude/` becomes `.claude/` on install.
-- `tests/`: one file per module. `scripts/sabotage.py`: mutation proof for every guard.
+- `tests/`: one file per module. `scripts/sabotage.py`: mutation proof for every guard and every door in front of the lab.
+- `playground/`: the lab's server and model (standard library). `site/`: landing page and lab page. `e2e/`: browser tests.
 
 ## Rules that apply to every task
 

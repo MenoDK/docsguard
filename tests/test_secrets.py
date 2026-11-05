@@ -66,6 +66,13 @@ def test_the_report_names_the_pattern_and_the_line_but_never_the_secret(repo_dir
     assert GITHUB not in found[0].render() and GITHUB[:8] not in found[0].render()
 
 
+def test_the_message_reads_as_english_whatever_the_pattern_is_called(repo_dir: Path) -> None:
+    write(repo_dir, "docs/notes.md", f"# Notes\n\nkey {AWS}\n")
+    assert "looks like an AWS access key id (value not shown)" in findings(repo_dir, "no-secrets")[0].message
+    write(repo_dir, "docs/notes.md", f"# Notes\n\ntoken {GITHUB}\n")
+    assert "looks like a GitHub token (value not shown)" in findings(repo_dir, "no-secrets")[0].message
+
+
 def test_secrets_are_looked_for_in_claude_configuration_too(repo_dir: Path) -> None:
     write(repo_dir, ".claude/settings.json", '{"env": {"password": "' + LONG_VALUE + '"}}\n')
     assert [f.path for f in findings(repo_dir, "no-secrets")] == [".claude/settings.json"]

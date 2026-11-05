@@ -1,0 +1,8 @@
+/* Only what the lab needs beyond the shared kit. */
+
+/* The budget report is a table printed in columns. Wrapped at the width of a card it reads as noise, so it keeps its
+   columns and scrolls sideways instead (the block is focusable, so the keyboard can scroll it too). */
+pre.out.terminal {
+  white-space: pre;
+  word-break: normal;
+}

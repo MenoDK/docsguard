@@ -85,6 +85,10 @@ def _candidates(repo: Repo, config: Config) -> list[str]:
     return sorted(p for p in paths if repo.path(p).is_file())
 
 
+def _article(name: str) -> str:
+    return "an" if name[0].lower() in "aeiou" else "a"
+
+
 def no_secrets(repo: Repo, config: Config) -> RuleResult:
     rule = "no-secrets"
     files = _candidates(repo, config)
@@ -92,7 +96,7 @@ def no_secrets(repo: Repo, config: Config) -> RuleResult:
         Finding(
             rule,
             path,
-            f"looks like a {name} (value not shown): remove it and rotate if it was ever real",
+            f"looks like {_article(name)} {name} (value not shown): remove it and rotate if it was ever real",
             line,
         )
         for path in files

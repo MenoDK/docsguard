@@ -14,6 +14,10 @@ Tool-neutral: what any engineer or coding agent needs to work here without askin
 | Mutation proof | `.venv/bin/python scripts/sabotage.py` |
 | This repo's own guards | `.venv/bin/docsguard check` |
 | Session cost, measured | `.venv/bin/docsguard budget` |
+| The lab and the landing page (needs Docker) | `make playground`, then http://localhost:8200 |
+| Black-box checks of the running lab | `make smoke` |
+| Browser tests (Playwright, axe, 14 languages) | `make e2e` |
+| Re-record the tour on the landing page | `make transcripts` (CI runs it with `--check`) |
 
 ## Definition of done
 
@@ -27,6 +31,10 @@ Tool-neutral: what any engineer or coding agent needs to work here without askin
 - Runtime dependencies stay at zero (`docs/adr/0002`). Dev tools are fine.
 - No literal that looks like a credential, even in a test; assemble it at run time.
 - Do not edit `src/docsguard/template/` without running `tests/test_template.py`: it is the shipped product.
+- The playground never executes what it is asked about, and never runs with the lab on in production
+  (`docs/adr/0007`). A change to `playground/` gets a test and, if it is a decision, a mutant in `scripts/sabotage.py`.
+- `site/kit.css`, `site/kit.js` and `site/i18n/ui.js` are a shared kit: change the text of this project in
+  `site/content.js`, `site/lab.js` and `site/i18n/<code>.js`, not in the kit.
 - Anything outside the task goes into `docs/CHECKLIST.md`, not into this change.
 
 ## Reporting

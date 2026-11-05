@@ -20,15 +20,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "docsguard"
+PLAYGROUND = ROOT / "playground"
 
 
 @dataclass(frozen=True)
 class Mutant:
     name: str
-    file: str  # relative to src/docsguard
+    file: str  # relative to src/docsguard, or to the repository root when it starts with "playground/"
     old: str
     new: str
     tests: str  # test module that must fail
+
+    @property
+    def path(self) -> Path:
+        return ROOT / self.file if self.file.startswith("playground/") else SRC / self.file
 
 
 MUTANTS: tuple[Mutant, ...] = (
@@ -423,15 +428,203 @@ MUTANTS: tuple[Mutant, ...] = (
         "if False:\n                target =",
         "tests/test_scope_guard.py",
     ),
+    # --- playground: the doors in front of the lab (a real socket, a real second request on the same connection)
+    Mutant(
+        "server: a foreign Host header is accepted",
+        "playground/server.py",
+        "return name in self.settings.allowed_hosts",
+        "return True",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: an IPv6 literal Host is cut at its first colon",
+        "playground/server.py",
+        'name = host[: host.find("]") + 1] if host.startswith("[") else host.split(":", 1)[0]',
+        'name = host.split(":", 1)[0]',
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: a foreign Origin may change the sample",
+        "playground/server.py",
+        'return origin_host != "" and origin_host == (host_header or "").lower()',
+        "return True",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: Sec-Fetch-Site cross-site is not refused",
+        "playground/server.py",
+        'if fetch_site == "cross-site":',
+        "if False:",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: the lab answers although it was not asked for",
+        "playground/server.py",
+        "if not self.settings.lab:",
+        "if False:",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: the lab starts in production",
+        "playground/server.py",
+        "if self.lab and self.production:",
+        "if False:",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: production is recognised only in lower case",
+        "playground/server.py",
+        'production=env.get("DG_ENV", "").strip().lower() == "production"',
+        'production=env.get("DG_ENV", "") == "production"',
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: a port that is not a port is accepted",
+        "playground/server.py",
+        "if not raw.isdigit() or not 0 < int(raw) < 65536:",
+        "if False:",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: a path outside the site is served",
+        "playground/server.py",
+        "base in candidate.parents",
+        "True",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: a dot-file inside the site is served",
+        "playground/server.py",
+        'not any(part.startswith(".") for part in candidate.relative_to(base).parts)',
+        "True",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: a file of any type is served",
+        "playground/server.py",
+        "and candidate.suffix in TYPES",
+        "and True",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: the content security policy is dropped",
+        "playground/server.py",
+        'self.send_header("Content-Security-Policy", CSP)',
+        'self.send_header("X-Policy-Dropped", CSP)',
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: a body that is not JSON is accepted",
+        "playground/server.py",
+        'if kind != "application/json":',
+        "if False:",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: the size limit of a body is not enforced",
+        "playground/server.py",
+        "if length > MAX_BODY:",
+        "if length > MAX_BODY * 1000:",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: a chunked body is taken for an empty one",
+        "playground/server.py",
+        'if self.headers.get("Transfer-Encoding"):\n                self._json(400',
+        "if False:\n                self._json(400",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: a body left unread does not close the connection",
+        "playground/server.py",
+        'return not self._body_read and (declared not in ("", "0") or bool(self.headers.get("Transfer-Encoding")))',
+        "return False",
+        "tests/test_playground_server.py",
+    ),
+    Mutant(
+        "server: a refused POST is answered before its body is read",
+        "playground/server.py",
+        "raw = self._take_body()  # before anything is answered, so the stream stays in step\n"
+        "            if raw is None or not self._gate(changes=True):\n"
+        "                return\n",
+        "if not self._gate(changes=True):\n                return\n"
+        "            raw = self._take_body()\n            if raw is None:\n                return\n",
+        "tests/test_playground_server.py",
+    ),
+    # --- playground: the sample and the hooks asked about it
+    Mutant(
+        "lab: an unknown break is accepted",
+        "playground/lab.py",
+        "if break_id not in _BY_ID:",
+        "if False:",
+        "tests/test_playground_lab.py",
+    ),
+    Mutant(
+        "lab: an authorization path may hold anything",
+        "playground/lab.py",
+        "if not _NEEDLE.match(needle):",
+        "if False:",
+        "tests/test_playground_lab.py",
+    ),
+    Mutant(
+        "lab: an authorization reason may span lines",
+        "playground/lab.py",
+        "if not _REASON.match(reason):",
+        "if False:",
+        "tests/test_playground_lab.py",
+    ),
+    Mutant(
+        "lab: the authorizations are not capped",
+        "playground/lab.py",
+        "if len(self._authorizations) >= MAX_AUTHORIZATIONS:",
+        "if False:",
+        "tests/test_playground_lab.py",
+    ),
+    Mutant(
+        "lab: a command of any length reaches the hook",
+        "playground/lab.py",
+        "if len(command) > MAX_COMMAND:",
+        "if False:",
+        "tests/test_playground_lab.py",
+    ),
+    Mutant(
+        "lab: a tool the hook does not model reaches it",
+        "playground/lab.py",
+        'if tool != "Bash" and tool not in EDIT_TOOLS:',
+        "if False:",
+        "tests/test_playground_lab.py",
+    ),
+    Mutant(
+        "lab: starting over keeps the authorization lines",
+        "playground/lab.py",
+        "            self._authorizations = []\n            self._rebuild()",
+        "            self._rebuild()",
+        "tests/test_playground_lab.py",
+    ),
+    Mutant(
+        "lab: the request shown carries the real working directory",
+        "playground/lab.py",
+        'shown = {**payload, "cwd": LABEL}',
+        "shown = payload",
+        "tests/test_playground_lab.py",
+    ),
+    Mutant(
+        "lab: closing leaves the temporary directory behind",
+        "playground/lab.py",
+        "shutil.rmtree(self._base, ignore_errors=True)",
+        "pass",
+        "tests/test_playground_lab.py",
+    ),
 )
 
 
 def tree_hash() -> str:
     digest = hashlib.sha256()
-    for path in sorted(SRC.rglob("*")):
-        if path.is_file() and "__pycache__" not in path.parts:
-            digest.update(path.relative_to(SRC).as_posix().encode())
-            digest.update(path.read_bytes())
+    for base in (SRC, PLAYGROUND):
+        for path in sorted(base.rglob("*")):
+            if path.is_file() and "__pycache__" not in path.parts:
+                digest.update(path.relative_to(ROOT).as_posix().encode())
+                digest.update(path.read_bytes())
     return digest.hexdigest()
 
 
@@ -476,7 +669,7 @@ def main() -> int:
     selected = [m for m in MUTANTS if args.keyword in m.name]
     print(f"{len(selected)} mutants; each must turn its test file red\n")
     for mutant in selected:
-        path = SRC / mutant.file
+        path = mutant.path
         original = path.read_text(encoding="utf-8")
         if original.count(mutant.old) != 1:
             print(f"  [setup error] {mutant.name}: pattern occurs {original.count(mutant.old)} times in {mutant.file}")

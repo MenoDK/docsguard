@@ -7,3 +7,8 @@
 dist
 build
 *.egg-info
+e2e/node_modules
+e2e/test-results
+e2e/playwright-report
+docs/img
+private
